@@ -44,6 +44,8 @@ unless($$ == $pid) {
     # only ptrace()'ing processes are allowed to read /dev/$pid/mem, so attach to it
     # PTRACE_ATTACH = 16,
     (syscall(&SYS_ptrace, 16, $pid, 0, 0)) == -1 && die "Can't attach to process $pid: $!";
+    # we've to wait for the attached process until it change his state to stopped (see man ptrace(2))
+    wait();
     $ptrace = 1;
 }
 
@@ -54,7 +56,9 @@ open(my $mapsfh, '<', $maps) or die "Can't open $maps for reading: $!";
 open(my $fh, '>', $file) or die "Can't open $file for writing: $!";
 
 while(my $line = <$mapsfh>) {
-    my ($start, $end, $perm, $offset, $fd, $inode, $tag) = $line =~ m/([0-9a-f]+)-([0-9a-f]+)\s([rwxp-]+)\s(\d+)\s([0-9fd:0-9]+)\s(\d+)\s+(.*)$/i;
+    # see fs/proc/task_mmu.c +232 ff.
+    # %08lx-%08lx %c%c%c%c %08llx %02x:%02x %lu %n
+    my ($start, $end, $perm, $offset, $fd, $inode, $tag) = $line =~ m/([0-9a-f]+)-([0-9a-f]+)\s([rwxp-]+)\s([0-9a-f]+)\s([0-9a-f:0-9a-f]+)\s(\d+)\s+(.*)$/i;
     if(defined($perm) && $perm =~/r/) {
         no warnings "portable";
         seek($memfh, hex($start), 0);
@@ -70,7 +74,7 @@ close($fh);
 
 unless($$ == $pid && !$ptrace) {
     $> == 0 || warn "You should better try this with root privileges or capability CAP_SYS_PTRACE set\n";
-    # dettach from traced process
-    # PTRACE_ATTACH = 17,
+    # detach from traced process
+    # PTRACE_DETACH = 17,
     (syscall(&SYS_ptrace, 17, $pid, 0, 0)) == -1 && die "Can't detach from process $pid: $!";
 }
