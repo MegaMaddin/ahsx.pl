@@ -28,12 +28,13 @@ dumps the memory directly via /proc/$pid/mem:
     start reading data from /proc/10751/mem via /proc/10751/maps and
     dumping to /tmp/core.10751
 
-If you have achived your coredump you can start ahsx.pl and redirect
-your dump to STDIN, ahsx.pl will do the rest and inform you if it
-found a certificate or a key:
+If you have achived your coredump you can start ahsx.pl and with
+your newly created dump, ahsx.pl will do the rest and inform you if 
+it found a certificate or a key:
 
     [root@server tmp]# perl ahsx.pl < /tmp/core.10751 
-    found a key with a length of 608 bytes, trying to extract...
-    written DER to file 20280000_608_der.key
-    found a crt with a length of 827 bytes, trying to extract...
-    written DER to file 20380304_827_der.crt
+    Found 2 certificates and 1 private key
+    Written them to the following files:
+    6292349_1193_der.key
+    3145728_893_der.crt
+    9439270_893_der.crt

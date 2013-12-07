@@ -40,8 +40,21 @@ my $buf;
 my @window;
 my $w_size = 6;
 
-my $fh = \*STDIN;
+my $fh;
+my $file = $ARGV[0];
+my $fsize;
 my $offset = 0;
+my $wheeler = 0;
+my @found_certs;
+my @found_keys;
+
+if(defined($file) && -r $file) {
+    open($fh, '<', $file) or die "Can't open $file for reading: $!\n";
+    $fsize = (stat($file))[7];
+    $| = 1;
+} else {
+    $fh = \*STDIN;
+}
 
 while(my $read_bytes = read($fh, $buf, $size)) {
     $offset += $read_bytes;
@@ -57,7 +70,7 @@ while(my $read_bytes = read($fh, $buf, $size)) {
                 my $type = hex($window[$idx+4]) == hex('0x30') ? 'crt' : 'key';
                 # length is 4 bytes after SEQUENCE header + SEQUENCE header
                 my $len = hex($window[$idx+2].$window[$idx+3]) + 4;
-                printf "found a %s with a length of %d bytes, trying to extract...\n", $type, $len;
+                printf "found a %s with a length of %d bytes, trying to extract...\n", $type, $len unless($fsize);
                 my $obj = extract($fh, $off, $len, $offset);
                 write_der($off.'_'.$len.'_der.'.$type, $obj) if(defined($obj));
             }
@@ -67,6 +80,27 @@ while(my $read_bytes = read($fh, $buf, $size)) {
     $offset -= $w_size;
     # but only if we know that there are more than window_size bytes left in $fh
     seek($fh, $offset, 0) unless($read_bytes <= $w_size);
+    progress_bar($fsize, $offset, 5) if(defined($fsize));
+}
+
+if(defined($fsize)) {
+    printf("Found %d certificate%s and %d private key%s\n", scalar(@found_certs),
+                                                            (scalar(@found_certs) > 1 || scalar(@found_certs) == 0 ? 's' : ''),
+                                                            scalar(@found_keys),
+                                                            (scalar(@found_keys) > 1 || scalar(@found_keys) == 0 ? 's' : ''));
+    print "Written them to the following files:\n", join("\n", @found_keys, @found_certs), "\n" if(scalar(@found_certs) >= 1 || scalar(@found_keys) >= 1);
+}
+
+sub progress_bar {
+    my $operation_size = shift;
+    my $progress = shift;
+    my $resolution = shift;
+    my $percentage = int($progress * 100 / $operation_size);
+    my $blocks = int($percentage/$resolution); 
+    my @wheel = ('/','|','\\', '-');
+    $wheeler = $wheeler >= $#wheel ? 0 : ++$wheeler;
+
+    printf("| %-2d %% | %s %-*s |\r", $percentage, $wheel[$wheeler], (100 / $resolution), '#'x$blocks);
 }
 
 sub write_der {
@@ -75,7 +109,8 @@ sub write_der {
     open(my $der, '>', $filename) || die "can't write DER to file: $!\n";
     print $der $data;
     close($der);
-    printf "written DER to file %s\n", $filename;
+    $filename =~ /key/ ? push(@found_keys, $filename) : push(@found_certs, $filename);
+    printf "written DER to file %s\n", $filename unless($fsize);
 }
 
 sub extract {
