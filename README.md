@@ -32,7 +32,7 @@ If you have achived your coredump you can start ahsx.pl and with
 your newly created dump, ahsx.pl will do the rest and inform you if 
 it found a certificate or a key:
 
-    [root@server tmp]# perl ahsx.pl < /tmp/core.10751 
+    [root@server tmp]# perl ahsx.pl /tmp/core.10751 
     Found 2 certificates and 1 private key
     Written them to the following files:
     6292349_1193_der.key
