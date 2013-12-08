@@ -28,9 +28,9 @@ dumps the memory directly via /proc/$pid/mem:
     start reading data from /proc/10751/mem via /proc/10751/maps and
     dumping to /tmp/core.10751
 
-If you have achived your coredump you can start ahsx.pl and with
-your newly created dump, ahsx.pl will do the rest and inform you if 
-it found a certificate or a key:
+If you have achived your coredump you can start ahsx.pl with your
+newly created dump, ahsx.pl will do the rest and inform you if it
+found a certificate or a key:
 
     [root@server tmp]# perl ahsx.pl /tmp/core.10751 
     Found 2 certificates and 1 private key
